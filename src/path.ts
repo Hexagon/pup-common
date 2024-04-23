@@ -5,8 +5,9 @@
  * @license MIT
  */
 
-import { isAbsolute, parse, resolve } from "@std/path";
+import { isAbsolute, parse } from "@std/path";
 import { cwd, mkdir } from "@cross/fs";
+import { resolve } from "node:path";
 
 export function toResolvedAbsolutePath(
   path: string,

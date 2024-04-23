@@ -1,6 +1,6 @@
 {
   "name": "@pup/common",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "exports": {
     "./ipc": "./src/ipc.ts",
     "./eventemitter": "./src/eventemitter.ts",
