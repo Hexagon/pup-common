@@ -8,7 +8,10 @@
 import { isAbsolute, parse, resolve } from "@std/path";
 import { cwd, mkdir } from "@cross/fs";
 
-export function toResolvedAbsolutePath(path: string, cwdInput?: string) {
+export function toResolvedAbsolutePath(
+  path: string,
+  cwdInput?: string,
+): string {
   const cwdToUse = cwdInput || cwd();
   if (!isAbsolute(path)) {
     return resolve(cwdToUse, path);
@@ -23,7 +26,7 @@ export function toResolvedAbsolutePath(path: string, cwdInput?: string) {
  * @param {string} configFile - The path to the configuration file.
  * @returns {string} The temporary path associated with the configuration file.
  */
-export async function toTempPath(configFile: string) {
+export async function toTempPath(configFile: string): Promise<string> {
   const resolvedPath = parse(toResolvedAbsolutePath(configFile));
   const tempPath = toResolvedAbsolutePath(
     `${resolvedPath.dir}/.pup/${resolvedPath.name}${resolvedPath.ext}-tmp`,
@@ -38,7 +41,7 @@ export async function toTempPath(configFile: string) {
  * @param {string} configFile - The path to the configuration file.
  * @returns {string} The persistent storage path associated with the configuration file.
  */
-export async function toPersistentPath(configFile: string) {
+export async function toPersistentPath(configFile: string): Promise<string> {
   const resolvedPath = parse(toResolvedAbsolutePath(configFile));
   const persistentStoragePath = resolve(
     `${resolvedPath.dir}/.pup/${resolvedPath.name}${resolvedPath.ext}-data`,
