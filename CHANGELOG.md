@@ -10,7 +10,8 @@ and this project adheres to
 
 ### Changed
 
-- Use resolve from `node:path` instead of `@std/path` to resolve issue in Windows
+- Use resolve from `node:path` instead of `@std/path` to resolve issue in
+  Windows
 
 ## [1.0.0] - 2024-04-23
 

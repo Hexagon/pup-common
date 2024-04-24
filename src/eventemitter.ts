@@ -11,6 +11,7 @@ class EventEmitter {
   // deno-lint-ignore no-explicit-any
   listeners: Map<string, Array<EventHandler<any>>> = new Map<
     string,
+    // deno-lint-ignore no-explicit-any
     Array<EventHandler<any>>
   >();
 

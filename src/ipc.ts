@@ -9,10 +9,20 @@
  * @license MIT
  */
 
-import { exists } from "@cross/fs";
+import {
+  exists,
+  type FSWatcher,
+  mkdir,
+  readFile,
+  unlink,
+  watch,
+  writeFile,
+} from "@cross/fs";
 import { basename, dirname, join } from "@std/path";
 import { debounce } from "@std/async";
 import { toResolvedAbsolutePath } from "./path.ts";
+import { pid } from "@cross/utils/pid";
+import { CurrentRuntime, Runtime } from "@cross/runtime";
 
 export interface IpcValidatedMessage {
   pid: number | null;
@@ -30,7 +40,8 @@ export class FileIPC {
   private debounceTimeMs: number;
   private messageQueue: IpcValidatedMessage[][] = [];
   private aborted = false;
-  private watcher?: Deno.FsWatcher;
+  // @ts-ignore cross-runtime
+  private watcher?: FSWatcher | Deno.Watcher;
 
   constructor(
     filePath: string,
@@ -59,7 +70,7 @@ export class FileIPC {
     if (this.aborted) return;
 
     // Create directory if it doesn't exist
-    await Deno.mkdir(this.dirPath, { recursive: true });
+    await mkdir(this.dirPath, { recursive: true });
 
     // Make an initial call to extractMessages to ensure that any existing messages are consumed
     const messages = await this.extractMessages();
@@ -68,7 +79,13 @@ export class FileIPC {
     }
 
     // Watch the directory, not the file
-    this.watcher = Deno.watchFs(this.dirPath);
+    // @ts-ignore cross-runtime
+    if (CurrentRuntime === Runtime.Deno) {
+      this.watcher = Deno.watchFs(this.dirPath);
+    } else {
+      this.watcher = watch(this.dirPath);
+    }
+    // @ts-ignore cross-runtime
     for await (const event of this.watcher) {
       // Stop if aborted
       if (this.aborted) break;
@@ -103,13 +120,13 @@ export class FileIPC {
     if (await exists(this.filePath)) {
       let fileContent;
       try {
-        fileContent = await Deno.readTextFile(this.filePath);
+        fileContent = await readFile(this.filePath);
       } catch (_e) {
         throw new Error(`Could not read '${this.filePath}'`);
       }
 
       try {
-        await Deno.remove(this.filePath);
+        await unlink(this.filePath);
       } catch (_e) {
         throw new Error(
           `Failed to remove '${this.filePath}', aborting ipc read.`,
@@ -119,8 +136,13 @@ export class FileIPC {
       const receivedMessages: IpcValidatedMessage[] = [];
 
       try {
-        const messages = JSON.parse(fileContent || "[]");
-        for (const messageObj of messages) {
+        let messages;
+        if (fileContent) {
+          messages = JSON.parse(new TextDecoder().decode(fileContent));
+        } else {
+          messages = { data: [] };
+        }
+        for (const messageObj of messages.data) {
           let validatedPid: number | null = null;
           let validatedSent: Date | null = null;
           let validatedData: string | null = null;
@@ -183,19 +205,30 @@ export class FileIPC {
    */
   async sendData(data: string): Promise<void> {
     // Create directory if it doesn't exist
-    await Deno.mkdir(this.dirPath, { recursive: true });
+    await mkdir(this.dirPath, { recursive: true });
 
     try {
-      const fileContent = await Deno.readTextFile(this.filePath).catch(() =>
-        ""
-      );
-      const messages = JSON.parse(fileContent || "[]");
-      messages.push({ pid: Deno.pid, data, sent: new Date().toISOString() });
-      await Deno.writeTextFile(this.filePath, JSON.stringify(messages), {
-        create: true,
+      let fileContent;
+      try {
+        fileContent = await readFile(this.filePath);
+      } catch (_e) { /* Ignore */ }
+      let messages;
+      if (fileContent) {
+        messages = JSON.parse(new TextDecoder().decode(fileContent));
+      } else {
+        messages = { data: [] };
+      }
+      messages.data.push({
+        pid: pid(),
+        data,
+        sent: new Date().toISOString(),
       });
+      await writeFile(
+        this.filePath,
+        JSON.stringify(messages),
+      );
     } catch (_e) {
-      console.error("Error sending data, read or write failed.");
+      console.error("Error sending data, read or write failed.", _e);
     }
   }
 
@@ -225,12 +258,15 @@ export class FileIPC {
 
     // Stop watching
     if (this.watcher) {
-      this.watcher.close();
+      if (CurrentRuntime === Runtime.Deno) {
+        this.watcher.close();
+      }
     }
+
     // Try to remove file, ignore failure
     if (!leaveFile) {
       try {
-        await Deno.remove(this.filePath);
+        await unlink(this.filePath);
       } catch (_e) {
         // Ignore
       }
