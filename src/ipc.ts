@@ -11,7 +11,6 @@
 
 import {
   exists,
-  type FileSystemEvent,
   FsWatcher,
   mkdir,
   readFile,
@@ -22,7 +21,6 @@ import { basename, dirname, join } from "@std/path";
 import { debounce } from "@std/async";
 import { toResolvedAbsolutePath } from "./path.ts";
 import { pid } from "@cross/utils/pid";
-import { CurrentRuntime, Runtime } from "@cross/runtime";
 
 export interface IpcValidatedMessage {
   pid: number | null;
