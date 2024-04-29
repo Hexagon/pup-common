@@ -1,6 +1,6 @@
 {
   "name": "@pup/common",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "exports": {
     "./ipc": "./src/ipc.ts",
     "./eventemitter": "./src/eventemitter.ts",
@@ -14,7 +14,7 @@
     "exclude": [".github"]
   },
   "imports": {
-    "@cross/fs": "jsr:@cross/fs@^0.0.10",
+    "@cross/fs": "jsr:@cross/fs@^0.1.11",
     "@cross/runtime": "jsr:@cross/runtime@^1.0.0",
     "@cross/test": "jsr:@cross/test@^0.0.9",
     "@cross/utils": "jsr:@cross/utils@^0.12.0",

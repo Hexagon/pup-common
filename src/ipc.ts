@@ -11,11 +11,11 @@
 
 import {
   exists,
-  type FSWatcher,
+  type FileSystemEvent,
+  FsWatcher,
   mkdir,
   readFile,
   unlink,
-  watch,
   writeFile,
 } from "@cross/fs";
 import { basename, dirname, join } from "@std/path";
@@ -79,21 +79,17 @@ export class FileIPC {
     }
 
     // Watch the directory, not the file
-    // @ts-ignore cross-runtime
-    if (CurrentRuntime === Runtime.Deno) {
-      this.watcher = Deno.watchFs(this.dirPath);
-    } else {
-      this.watcher = watch(this.dirPath);
-    }
-    // @ts-ignore cross-runtime
-    for await (const event of this.watcher) {
+    this.watcher = FsWatcher();
+
+    for await (const event of this.watcher.watch(this.dirPath)) {
       // Stop if aborted
       if (this.aborted) break;
 
       // Check that the event pertains to the correct file
       if (
-        event.kind === "modify" &&
-        event.paths.includes(join(this.dirPath, this.fileName))
+        // Deno watcher event
+        ((event.kind === "modify" || event.kund === "rename") &&
+          event.paths.includes(join(this.dirPath, this.fileName)))
       ) {
         debounce(async () => {
           try {
@@ -258,9 +254,7 @@ export class FileIPC {
 
     // Stop watching
     if (this.watcher) {
-      if (CurrentRuntime === Runtime.Deno) {
-        this.watcher.close();
-      }
+      this.watcher.close();
     }
 
     // Try to remove file, ignore failure
